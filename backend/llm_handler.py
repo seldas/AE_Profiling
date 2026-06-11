@@ -187,7 +187,6 @@ def extract_ae_with_gemini(text: str, is_boxed_warning: bool = False) -> List[di
         print(f"Gemini API extraction error: {e}")
         return []
 
-def extract_ae_with_openai(text: str, is_boxed_warning: bool = False) -> List[dict]:
 def extract_ae_with_vllm(text: str, is_boxed_warning: bool = False) -> List[dict]:
     """
     Call vLLM API to extract adverse events.
@@ -233,6 +232,55 @@ def extract_ae_with_vllm(text: str, is_boxed_warning: bool = False) -> List[dict
         print(f"vLLM API extraction error: {e}")
         return []
 
+def extract_ae_with_openai(text: str, is_boxed_warning: bool = False) -> List[dict]:
+    """
+    Call OpenAI API to extract adverse events.
+    """
+    api_key = OPENAI_API_KEY
+    if not api_key:
+        print("OpenAI API key is missing. Skipping extraction.")
+        return []
+        
+    url = f"{OPENAI_API_BASE}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    prompt = f"Analyze the following drug label section (Is Boxed Warning: {is_boxed_warning}). Extract the adverse events:\n\n{text}"
+    model = LLM_MODEL
+    
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"}
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        response.raise_for_status()
+        res_data = response.json()
+        content = res_data["choices"][0]["message"]["content"]
+        
+        parsed = json.loads(content)
+        events = parsed.get("adverse_events", [])
+        
+        for e in events:
+            if is_boxed_warning:
+                e["is_boxed_warning"] = True
+                e["severity"] = "Boxed Warning"
+            elif "is_boxed_warning" not in e:
+                e["is_boxed_warning"] = False
+        return events
+    except Exception as e:
+        print(f"OpenAI API extraction error: {e}")
+        return []
+
+
 
 def is_ollama_online() -> bool:
     """
@@ -265,8 +313,10 @@ def extract_adverse_events(text: str, is_boxed_warning: bool = False, provider_o
         
     if provider == "gemini":
         return extract_ae_with_gemini(text, is_boxed_warning)
-    elif provider == "vllm" or provider == "openai":
+    elif provider == "vllm":
         return extract_ae_with_vllm(text, is_boxed_warning)
+    elif provider == "openai":
+        return extract_ae_with_openai(text, is_boxed_warning)
     else:
         # Fallback to Ollama if no valid provider configured
         print(f"Using Ollama provider ({LLM_MODEL}).")

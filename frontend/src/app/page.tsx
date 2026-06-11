@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Plus, Trash2, ArrowRight, ShieldAlert, Sparkles, Database, FileText, CheckCircle2, XCircle, Loader2, X } from "lucide-react";
+import FormattedContext from "@/components/FormattedContext";
 
 // Types corresponding to Backend models
 interface Drug {
@@ -412,28 +413,6 @@ function DashboardContent() {
     return rawDate;
   };
 
-  // Helper function to highlight keywords in context text
-  const highlightContext = (text: string, term: string, severity: string) => {
-    if (!text) return "";
-    if (!term) return text;
-    
-    // Escape regex characters
-    const escapedTerm = term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-    try {
-      const regex = new RegExp(`(${escapedTerm})`, "gi");
-      const parts = text.split(regex);
-      return parts.map((part, idx) => 
-        regex.test(part) ? (
-          <mark key={idx}>{part}</mark>
-        ) : (
-          part
-        )
-      );
-    } catch (e) {
-      return text;
-    }
-  };
-
   return (
     <div className="container">
       {/* Hero Section */}
@@ -770,9 +749,12 @@ function DashboardContent() {
                           </div>
                         </div>
                         {item.adverse_event.raw_context && (
-                          <div className={`result-context ${item.adverse_event.is_boxed_warning ? 'boxed-warning': ''}`}>
-                            "{highlightContext(item.adverse_event.raw_context, item.adverse_event.original_term || item.adverse_event.ae_term, item.adverse_event.severity || "")}"
-                          </div>
+                          <FormattedContext 
+                            text={item.adverse_event.raw_context}
+                            term={item.adverse_event.original_term || item.adverse_event.ae_term}
+                            severity={item.adverse_event.severity}
+                            isBoxedWarning={item.adverse_event.is_boxed_warning}
+                          />
                         )}
                       </div>
                     );

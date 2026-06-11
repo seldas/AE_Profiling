@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Activity, ShieldAlert, AlertTriangle, AlertCircle, Info, FileText, ExternalLink, Sparkles, Loader2, CheckCircle2, XCircle, X } from "lucide-react";
+import FormattedContext from "@/components/FormattedContext";
 import Link from "next/link";
 
 // Types corresponding to Backend models
@@ -706,10 +707,12 @@ function AdverseEventItem({ ae, sectionLoincNames, expanded, onClick, onInspect,
 
           {ae.raw_context && (
             <div style={{ marginBottom: "8px" }}>
-              <div className="context-header">Clinical Verbatim Context</div>
-              <div className="context-text">
-                &quot;{ae.raw_context}&quot;
-              </div>
+              <FormattedContext 
+                text={ae.raw_context}
+                term={ae.original_term || ae.ae_term}
+                severity={ae.severity}
+                isBoxedWarning={ae.is_boxed_warning}
+              />
             </div>
           )}
 
@@ -893,11 +896,13 @@ export function PreferredTermGroup({ ptName, ptCode, occurrences, sectionLoincNa
                     )}
 
                     {ae.raw_context && (
-                      <div style={{ marginBottom: "8px" }}>
-                        <div className="context-header">Clinical Verbatim Context</div>
-                        <div className="context-text" style={{ fontSize: "0.8rem", padding: "6px 10px" }}>
-                          &quot;{ae.raw_context}&quot;
-                        </div>
+                      <div style={{ marginTop: "8px" }}>
+                        <FormattedContext 
+                          text={ae.raw_context}
+                          term={ae.original_term || ae.ae_term}
+                          severity={ae.severity}
+                          isBoxedWarning={ae.is_boxed_warning}
+                        />
                       </div>
                     )}
 
