@@ -25,9 +25,7 @@ export default function RootLayout({
               </a>
               <nav className="header-nav">
                 <a href="/" className="nav-link">Dashboard</a>
-                <a href="https://dailymed.nlm.nih.gov/" target="_blank" rel="noopener noreferrer" className="nav-link external">
-                  DailyMed Services ↗
-                </a>
+
                 <ModelSelector />
               </nav>
             </div>

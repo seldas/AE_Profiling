@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Activity, ShieldAlert, AlertTriangle, AlertCircle, Info, FileText, ExternalLink, Sparkles, Loader2, CheckCircle2, XCircle, X } from "lucide-react";
+import { ArrowLeft, Activity, ShieldAlert, AlertTriangle, AlertCircle, Info, FileText, ExternalLink, Sparkles, Loader2, CheckCircle2, XCircle, X, Download } from "lucide-react";
 import FormattedContext from "@/components/FormattedContext";
 import Link from "next/link";
 
@@ -126,6 +126,42 @@ export default function DrugDetailPage() {
       return `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`;
     }
     return rawDate;
+  };
+
+  const handleExportJson = () => {
+    if (!drug) return;
+    
+    const exportData = {
+      drug_name: drug.drug_name,
+      set_id: drug.set_id,
+      spl_id: drug.spl_id,
+      published_date: drug.published_date,
+      adverse_events: drug.adverse_events.map(ae => ({
+        term: ae.ae_term,
+        original_term: ae.original_term,
+        severity: ae.severity,
+        frequency: ae.frequency,
+        is_boxed_warning: ae.is_boxed_warning,
+        context: ae.raw_context,
+        source_section: sectionLoincNames[ae.section_code || ""] || ae.section_code,
+        meddra_info: {
+          primary_pt_code: ae.meddra_pt_code,
+          primary_pt_name: ae.meddra_pt_name,
+          primary_soc_name: ae.meddra_soc_name,
+          primary_hlt_name: ae.meddra_hlt_name,
+          primary_hlgt_name: ae.meddra_hlgt_name,
+          all_chains: ae.meddra_all_chains || []
+        }
+      }))
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `${drug.drug_name.replace(/\s+/g, '_')}_AE_Profile.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   };
 
   if (loading) {
@@ -273,15 +309,15 @@ export default function DrugDetailPage() {
             <span><strong>Published:</strong> {formatDateString(drug.published_date || "")}</span>
           </div>
         </div>
-        <a 
-          href={`https://dailymed.nlm.nih.gov/dailymed/spl-lookup-results.cfm?term=${drug.set_id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-secondary"
-          style={{ fontSize: "0.85rem", padding: "8px 16px" }}
-        >
-          View on DailyMed <ExternalLink size={14} style={{ marginLeft: "4px" }} />
-        </a>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <button 
+            onClick={handleExportJson}
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "8px 16px" }}
+          >
+            Export JSON <Download size={14} style={{ marginLeft: "4px" }} />
+          </button>
+        </div>
       </div>
 
       {/* Main Grid */}
