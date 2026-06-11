@@ -61,6 +61,17 @@ def parse_xml_to_html(element: ET.Element) -> str:
     for para_tag in root_node.find_all('paragraph'):
         para_tag.name = 'p'
     
+    # If the root element is a section, extract only <title> and <text> nodes in document order
+    # to avoid rendering unwanted structural tags like <id>, <code>, <component>.
+    if root_node.name == 'section':
+        html_parts = []
+        for node in root_node.find_all(['title', 'text']):
+            if node.name == 'title':
+                html_parts.append(f"<h4>{node.get_text(strip=True)}</h4>")
+            else:
+                html_parts.append("".join(str(child) for child in node.children))
+        return "\n".join(html_parts)
+
     # Return inner HTML of the text element
     return "".join(str(child) for child in root_node.children)
 
@@ -151,17 +162,21 @@ def parse_spl_xml(xml_content: str):
                 section_title_elem = section.find('ns:title', NAMESPACES)
                 section_title = section_title_elem.text.strip() if section_title_elem is not None else SECTION_MAPPING[code]
                 
-                text_elem = section.find('ns:text', NAMESPACES)
-                if text_elem is not None:
-                    html_content = parse_xml_to_html(text_elem)
-                    plain_text = clean_text_for_llm(html_content)
-                    
-                    # Store both HTML (for UI) and plain text (for LLM)
-                    sections[code] = {
-                        "title": section_title,
-                        "html": html_content,
-                        "text": plain_text
-                    }
+                # Some target sections (like Adverse Reactions) might not have direct text,
+                # but instead contain sub-sections that have the text.
+                # Passing the entire section allows us to aggregate all nested titles and text.
+                html_content = parse_xml_to_html(section)
+                if not html_content.strip():
+                    continue
+                
+                plain_text = clean_text_for_llm(html_content)
+                
+                # Store both HTML (for UI) and plain text (for LLM)
+                sections[code] = {
+                    "title": section_title,
+                    "html": html_content,
+                    "text": plain_text
+                }
     
     return {
         "metadata": {
