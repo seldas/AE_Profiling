@@ -185,7 +185,7 @@ def search_adverse_events(
     return search_results
 
 @app.get("/api/drugs/{id_or_spl_id}/extract")
-def extract_adverse_events_stream(id_or_spl_id: str):
+def extract_adverse_events_stream(id_or_spl_id: str, provider: Optional[str] = None):
     """
     Stream adverse events extraction progress for a drug.
     """
@@ -281,7 +281,7 @@ def extract_adverse_events_stream(id_or_spl_id: str):
                 await asyncio.sleep(0.1)
 
                 try:
-                    events = await run_in_threadpool(llm_handler.extract_adverse_events, clean_text, is_boxed_warning)
+                    events = await run_in_threadpool(llm_handler.extract_adverse_events, clean_text, is_boxed_warning, provider)
                 except Exception as ex:
                     print(f"LLM extraction failed for section {title}: {ex}")
                     events = []

@@ -84,7 +84,9 @@ function DashboardContent() {
     setOverallMessage('Connecting to AI extraction stream...');
     setExtractionLog([]);
 
-    const eventSource = new EventSource(`${API_BASE_URL}/api/drugs/${drugId}/extract`);
+    const provider = localStorage.getItem("llm_provider") || "";
+    const url = provider ? `${API_BASE_URL}/api/drugs/${drugId}/extract?provider=${provider}` : `${API_BASE_URL}/api/drugs/${drugId}/extract`;
+    const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {

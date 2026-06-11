@@ -244,7 +244,7 @@ def is_ollama_online() -> bool:
     except Exception:
         return False
 
-def extract_adverse_events(text: str, is_boxed_warning: bool = False) -> List[dict]:
+def extract_adverse_events(text: str, is_boxed_warning: bool = False, provider_override: str = None) -> List[dict]:
     """
     Primary interface for extracting adverse events from text.
     Dispatches to the configured provider (ollama, gemini, openai, or vllm).
@@ -255,7 +255,7 @@ def extract_adverse_events(text: str, is_boxed_warning: bool = False) -> List[di
         print(f"Truncating section text from {len(text)} to {max_chars} characters for LLM.")
         text = text[:max_chars] + "\n... [truncated]"
         
-    provider = LLM_PROVIDER.lower()
+    provider = (provider_override or LLM_PROVIDER).lower()
     
     # Auto-detect fallback:
     # If Ollama is selected but offline, and a Gemini key is available, use Gemini.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ModelSelector from "@/components/ModelSelector";
 
 export const metadata: Metadata = {
   title: "AEProfile - Standardized Adverse Event Label Profiler",
@@ -27,6 +28,7 @@ export default function RootLayout({
                 <a href="https://dailymed.nlm.nih.gov/" target="_blank" rel="noopener noreferrer" className="nav-link external">
                   DailyMed Services ↗
                 </a>
+                <ModelSelector />
               </nav>
             </div>
           </header>
