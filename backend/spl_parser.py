@@ -39,7 +39,11 @@ def parse_xml_to_html(element: ET.Element) -> str:
     # Convert element to string, strip namespace tags
     raw_xml = ET.tostring(element, encoding='utf-8').decode('utf-8')
     # Remove xmlns declaration so it doesn't mess up parsing
-    raw_xml = re.sub(r'\s+xmlns="[^"]+"', '', raw_xml, count=1)
+    raw_xml = re.sub(r'\s+xmlns(?::\w+)="[^"]+"', '', raw_xml)
+    raw_xml = re.sub(r'\s+xmlns="[^"]+"', '', raw_xml)
+    
+    # Strip namespace prefixes from all tags (e.g. <ns0:table> -> <table>)
+    raw_xml = re.sub(r'<(/?)[a-zA-Z0-9_-]+:', r'<\1', raw_xml)
     
     # Use BeautifulSoup to clean and structure
     soup = BeautifulSoup(raw_xml, 'xml')
