@@ -195,9 +195,9 @@ function DashboardContent() {
 
   // Sample SPL/SetIDs for easy testing
   const sampleSuggestions = [
-    { name: "Lisinopril", setId: "1d0caa63-9ea2-4a97-a23b-900a7c514bc6" },
-    { name: "Ibuprofen", setId: "34a9b94f-93ba-4a7c-92eb-d0b4b530d887" },
-    { name: "Metformin", setId: "372af566-d6ec-446f-88db-0b4cc83b577f" }
+    { name: "Lisinopril", setId: "40e6b627-63dc-4d52-aaa8-750663ad86c2" },
+    { name: "Ibuprofen", setId: "7d1950b4-3237-4512-bab3-4c7364bdd618" },
+    { name: "Metformin", setId: "0569d5d5-70df-46d7-954a-fe00542a7191" }
   ];
 
   // Fetch all ingested drugs
