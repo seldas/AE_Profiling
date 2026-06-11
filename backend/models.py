@@ -44,6 +44,8 @@ class AdverseEvent(Base):
     meddra_hlt_name = Column(String(255), nullable=True, index=True)
     meddra_hlgt_name = Column(String(255), nullable=True, index=True)
     
+    meddra_all_chains = Column(JSONB, nullable=True)
+    
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     drug = relationship("Drug", back_populates="adverse_events")

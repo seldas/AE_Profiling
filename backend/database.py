@@ -140,22 +140,37 @@ def import_meddra_data():
     finally:
         db.close()
 
-def map_term_to_meddra(db, term: str):
+def map_term_to_meddra(db, term: str) -> list[int]:
     import models
+    from sqlalchemy.sql import text
     if not term:
-        return None
+        return []
     
     term_clean = term.strip()
     
+    # We will collect unique pt_codes in order of matching priority
+    pt_codes = []
+    def add_code(code):
+        if code and code not in pt_codes:
+            pt_codes.append(code)
+
+    def add_codes(codes):
+        for code in codes:
+            add_code(code)
+            if len(pt_codes) >= 10:
+                break
+
     # 1. Try exact match in llt (case-insensitive)
-    llt_match = db.query(models.MedDraLlt).filter(models.MedDraLlt.llt_name.ilike(term_clean)).first()
-    if llt_match:
-        return llt_match.pt_code
+    llt_matches = db.query(models.MedDraLlt).filter(models.MedDraLlt.llt_name.ilike(term_clean)).limit(10).all()
+    if llt_matches:
+        add_codes([m.pt_code for m in llt_matches])
+        if pt_codes: return pt_codes
 
     # 2. Try exact match in hierarchy (case-insensitive)
-    hier_match = db.query(models.MedDraHierarchy).filter(models.MedDraHierarchy.pt_name.ilike(term_clean)).first()
-    if hier_match:
-        return hier_match.pt_code
+    hier_matches = db.query(models.MedDraHierarchy).filter(models.MedDraHierarchy.pt_name.ilike(term_clean)).limit(10).all()
+    if hier_matches:
+        add_codes([m.pt_code for m in hier_matches])
+        if pt_codes: return pt_codes
 
     # Custom synonym/concept mapping for common non-standard terms
     synonyms = {
@@ -166,7 +181,7 @@ def map_term_to_meddra(db, term: str):
         "renal failure neonatal": 10038450, # Renal failure neonatal
     }
     if term_clean.lower() in synonyms:
-        return synonyms[term_clean.lower()]
+        return [synonyms[term_clean.lower()]]
 
     # 3. Clean common prefixes/suffixes and try matching again
     cleaned_term = term_clean.lower()
@@ -207,32 +222,38 @@ def map_term_to_meddra(db, term: str):
     
     if cleaned_term:
         # Try match on cleaned term
-        llt_match = db.query(models.MedDraLlt).filter(models.MedDraLlt.llt_name.ilike(cleaned_term)).first()
-        if llt_match:
-            return llt_match.pt_code
+        llt_matches = db.query(models.MedDraLlt).filter(models.MedDraLlt.llt_name.ilike(cleaned_term)).limit(10).all()
+        if llt_matches:
+            add_codes([m.pt_code for m in llt_matches])
+            if pt_codes: return pt_codes
 
-        hier_match = db.query(models.MedDraHierarchy).filter(models.MedDraHierarchy.pt_name.ilike(cleaned_term)).first()
-        if hier_match:
-            return hier_match.pt_code
+        hier_matches = db.query(models.MedDraHierarchy).filter(models.MedDraHierarchy.pt_name.ilike(cleaned_term)).limit(10).all()
+        if hier_matches:
+            add_codes([m.pt_code for m in hier_matches])
+            if pt_codes: return pt_codes
 
         # 4. Partial substring match:
         # A. Check if the term contains a PT or LLT term (e.g. "fulminant hepatic necrosis" contains "hepatic necrosis")
-        hier_match = db.query(models.MedDraHierarchy).filter(text(":term ILIKE '%' || pt_name || '%'")).params(term=cleaned_term).first()
-        if hier_match:
-            return hier_match.pt_code
+        hier_matches = db.query(models.MedDraHierarchy).filter(text(":term ILIKE '%' || pt_name || '%'")).params(term=cleaned_term).limit(10).all()
+        if hier_matches:
+            add_codes([m.pt_code for m in hier_matches])
+            if pt_codes: return pt_codes
 
-        llt_match = db.query(models.MedDraLlt).filter(text(":term ILIKE '%' || llt_name || '%'")).params(term=cleaned_term).first()
-        if llt_match:
-            return llt_match.pt_code
+        llt_matches = db.query(models.MedDraLlt).filter(text(":term ILIKE '%' || llt_name || '%'")).params(term=cleaned_term).limit(10).all()
+        if llt_matches:
+            add_codes([m.pt_code for m in llt_matches])
+            if pt_codes: return pt_codes
 
         # B. Check if PT or LLT term contains our cleaned term
-        hier_match = db.query(models.MedDraHierarchy).filter(models.MedDraHierarchy.pt_name.ilike(f"%{cleaned_term}%")).first()
-        if hier_match:
-            return hier_match.pt_code
+        hier_matches = db.query(models.MedDraHierarchy).filter(models.MedDraHierarchy.pt_name.ilike(f"%{cleaned_term}%")).limit(10).all()
+        if hier_matches:
+            add_codes([m.pt_code for m in hier_matches])
+            if pt_codes: return pt_codes
             
-        llt_match = db.query(models.MedDraLlt).filter(models.MedDraLlt.llt_name.ilike(f"%{cleaned_term}%")).first()
-        if llt_match:
-            return llt_match.pt_code
+        llt_matches = db.query(models.MedDraLlt).filter(models.MedDraLlt.llt_name.ilike(f"%{cleaned_term}%")).limit(10).all()
+        if llt_matches:
+            add_codes([m.pt_code for m in llt_matches])
+            if pt_codes: return pt_codes
 
         # 5. Word token intersection match
         words = [w for w in cleaned_term.split() if len(w) > 2]
@@ -240,18 +261,20 @@ def map_term_to_meddra(db, term: str):
             query = db.query(models.MedDraHierarchy)
             for w in words:
                 query = query.filter(models.MedDraHierarchy.pt_name.ilike(f"%{w}%"))
-            hier_match = query.first()
-            if hier_match:
-                return hier_match.pt_code
+            hier_matches = query.limit(10).all()
+            if hier_matches:
+                add_codes([m.pt_code for m in hier_matches])
+                if pt_codes: return pt_codes
 
             query = db.query(models.MedDraLlt)
             for w in words:
                 query = query.filter(models.MedDraLlt.llt_name.ilike(f"%{w}%"))
-            llt_match = query.first()
-            if llt_match:
-                return llt_match.pt_code
+            llt_matches = query.limit(10).all()
+            if llt_matches:
+                add_codes([m.pt_code for m in llt_matches])
+                if pt_codes: return pt_codes
 
-    return None
+    return pt_codes
 
 def remap_existing_adverse_events(db):
     import models

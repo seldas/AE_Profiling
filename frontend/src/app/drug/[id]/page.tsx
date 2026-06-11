@@ -35,6 +35,13 @@ interface AdverseEvent {
   meddra_soc_name?: string;
   meddra_hlt_name?: string;
   meddra_hlgt_name?: string;
+  meddra_all_chains?: Array<{
+    pt_code: number;
+    pt_name: string;
+    soc_name: string;
+    hlt_name: string;
+    hlgt_name: string;
+  }>;
 }
 
 export default function DrugDetailPage() {
@@ -53,6 +60,8 @@ export default function DrugDetailPage() {
   const [expandedAeId, setExpandedAeId] = useState<number | null>(null);
   const [highlightTerm, setHighlightTerm] = useState<string>(initialHighlight);
   const [activeViewTab, setActiveViewTab] = useState<"severity" | "organ-system">("organ-system");
+  const [showChainsModal, setShowChainsModal] = useState<boolean>(false);
+  const [selectedChains, setSelectedChains] = useState<AdverseEvent["meddra_all_chains"]>([]);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -412,6 +421,7 @@ export default function DrugDetailPage() {
                         expanded={expandedAeId === ae.id}
                         onClick={() => setExpandedAeId(expandedAeId === ae.id ? null : ae.id)}
                         onInspect={handleInspectSource}
+                        onShowChains={(chains) => { setSelectedChains(chains); setShowChainsModal(true); }}
                       />
                     ))}
                   </div>
@@ -434,6 +444,7 @@ export default function DrugDetailPage() {
                         expanded={expandedAeId === ae.id}
                         onClick={() => setExpandedAeId(expandedAeId === ae.id ? null : ae.id)}
                         onInspect={handleInspectSource}
+                        onShowChains={(chains) => { setSelectedChains(chains); setShowChainsModal(true); }}
                       />
                     ))}
                   </div>
@@ -456,6 +467,7 @@ export default function DrugDetailPage() {
                         expanded={expandedAeId === ae.id}
                         onClick={() => setExpandedAeId(expandedAeId === ae.id ? null : ae.id)}
                         onInspect={handleInspectSource}
+                        onShowChains={(chains) => { setSelectedChains(chains); setShowChainsModal(true); }}
                       />
                     ))}
                   </div>
@@ -478,6 +490,7 @@ export default function DrugDetailPage() {
                         expanded={expandedAeId === ae.id}
                         onClick={() => setExpandedAeId(expandedAeId === ae.id ? null : ae.id)}
                         onInspect={handleInspectSource}
+                        onShowChains={(chains) => { setSelectedChains(chains); setShowChainsModal(true); }}
                       />
                     ))}
                   </div>
@@ -539,6 +552,7 @@ export default function DrugDetailPage() {
                         occurrences={pt.occurrences}
                         sectionLoincNames={sectionLoincNames}
                         onInspect={handleInspectSource}
+                        onShowChains={(chains) => { setSelectedChains(chains); setShowChainsModal(true); }}
                       />
                     ))}
                   </div>
@@ -615,6 +629,65 @@ export default function DrugDetailPage() {
         </div>
 
       </div>
+
+      {/* Chains Modal */}
+      {showChainsModal && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000
+        }}>
+          <div className="glass-panel" style={{
+            background: "var(--background)",
+            padding: "24px",
+            borderRadius: "16px",
+            width: "90%",
+            maxWidth: "600px",
+            maxHeight: "80vh",
+            overflowY: "auto",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>🧬</span> Multiple MedDRA Chain Mappings
+              </h3>
+              <button 
+                onClick={() => setShowChainsModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "16px" }}>
+              This term mapped to multiple distinct Preferred Terms (PTs) or System Organ Classes (SOCs). All possible matches are revealed below:
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {selectedChains?.map((chain, idx) => (
+                <div key={idx} style={{ 
+                  padding: "12px", 
+                  background: "rgba(0, 240, 255, 0.02)", 
+                  border: "1px solid rgba(0, 240, 255, 0.1)", 
+                  borderRadius: "8px",
+                  fontSize: "0.8rem"
+                }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
+                    <div><span style={{ color: "var(--text-muted)" }}>Preferred Term (PT):</span> <strong style={{ color: "var(--text-primary)" }}>{chain.pt_name}</strong></div>
+                    <div><span style={{ color: "var(--text-muted)" }}>Organ Class (SOC):</span> <strong style={{ color: "var(--text-primary)" }}>{chain.soc_name}</strong></div>
+                    {chain.hlt_name && <div style={{ gridColumn: "span 2" }}><span style={{ color: "var(--text-muted)" }}>High Level Term (HLT):</span> <span style={{ color: "var(--text-secondary)" }}>{chain.hlt_name}</span></div>}
+                    {chain.hlgt_name && <div style={{ gridColumn: "span 2" }}><span style={{ color: "var(--text-muted)" }}>High Level Group Term (HLGT):</span> <span style={{ color: "var(--text-secondary)" }}>{chain.hlgt_name}</span></div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -627,9 +700,10 @@ interface AdverseEventItemProps {
   onClick: () => void;
   onInspect: (sectionCode: string, term: string) => void;
   allAes?: AdverseEvent[];
+  onShowChains?: (chains: AdverseEvent["meddra_all_chains"]) => void;
 }
 
-function AdverseEventItem({ ae, sectionLoincNames, expanded, onClick, onInspect, allAes }: AdverseEventItemProps) {
+function AdverseEventItem({ ae, sectionLoincNames, expanded, onClick, onInspect, allAes, onShowChains }: AdverseEventItemProps) {
   const sevClass = ae.is_boxed_warning 
     ? "boxed-warning" 
     : (ae.severity || "").toLowerCase();
@@ -678,8 +752,32 @@ function AdverseEventItem({ ae, sectionLoincNames, expanded, onClick, onInspect,
               fontSize: "0.75rem",
               marginBottom: "12px"
             }}>
-              <div style={{ fontWeight: 600, color: "var(--primary)", marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                <span>🧬</span> MedDRA Taxonomy Classification
+              <div style={{ fontWeight: 600, color: "var(--primary)", marginBottom: "6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span>🧬</span> MedDRA Taxonomy Classification
+                </span>
+                {ae.meddra_all_chains && ae.meddra_all_chains.length > 1 && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onShowChains) onShowChains(ae.meddra_all_chains!);
+                    }}
+                    style={{
+                      background: "rgba(0, 240, 255, 0.1)",
+                      border: "1px solid rgba(0, 240, 255, 0.2)",
+                      color: "var(--primary)",
+                      borderRadius: "6px",
+                      padding: "4px 8px",
+                      fontSize: "0.7rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                  >
+                    <span>+{ae.meddra_all_chains.length - 1} More Chains</span>
+                  </button>
+                )}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
                 <div><span style={{ color: "var(--text-muted)" }}>Preferred Term (PT):</span> <strong style={{ color: "var(--text-primary)" }}>{ae.meddra_pt_name}</strong> <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>({ae.meddra_pt_code})</span></div>
@@ -771,9 +869,10 @@ interface PreferredTermGroupProps {
   occurrences: AdverseEvent[];
   sectionLoincNames: Record<string, string>;
   onInspect: (sectionCode: string, term: string) => void;
+  onShowChains?: (chains: AdverseEvent["meddra_all_chains"]) => void;
 }
 
-export function PreferredTermGroup({ ptName, ptCode, occurrences, sectionLoincNames, onInspect }: PreferredTermGroupProps) {
+export function PreferredTermGroup({ ptName, ptCode, occurrences, sectionLoincNames, onInspect, onShowChains }: PreferredTermGroupProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedOccurId, setExpandedOccurId] = useState<number | null>(null);
 
@@ -797,7 +896,32 @@ export function PreferredTermGroup({ ptName, ptCode, occurrences, sectionLoincNa
         style={{ padding: "10px 14px" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span className="ae-detail-name" style={{ fontSize: "0.9rem", fontWeight: 600 }}>{ptName}</span>
+          <span className="ae-detail-name" style={{ fontSize: "0.9rem", fontWeight: 600 }}>
+            {ptName}
+            {occurrences[0]?.meddra_all_chains && occurrences[0].meddra_all_chains.length > 1 && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onShowChains) onShowChains(occurrences[0].meddra_all_chains);
+                }}
+                style={{
+                  background: "rgba(0, 240, 255, 0.1)",
+                  border: "1px solid rgba(0, 240, 255, 0.2)",
+                  color: "var(--primary)",
+                  borderRadius: "6px",
+                  padding: "2px 6px",
+                  fontSize: "0.65rem",
+                  cursor: "pointer",
+                  marginLeft: "8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+              >
+                <span>+{occurrences[0].meddra_all_chains.length - 1} Chains</span>
+              </button>
+            )}
+          </span>
           {occurrences.length > 1 && (
             <span className="badge badge-mild" style={{ background: "rgba(0, 240, 255, 0.05)", borderColor: "rgba(0, 240, 255, 0.2)", color: "var(--primary)", fontSize: "0.65rem", padding: "1px 6px", textTransform: "none", animation: "pulse-glow-cyan 3s infinite" }}>
               {occurrences.length} mentions
@@ -826,8 +950,32 @@ export function PreferredTermGroup({ ptName, ptCode, occurrences, sectionLoincNa
               fontSize: "0.75rem",
               marginBottom: "4px"
             }}>
-              <div style={{ fontWeight: 600, color: "var(--primary)", marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px" }}>
-                <span>🧬</span> MedDRA Taxonomy Classification
+              <div style={{ fontWeight: 600, color: "var(--primary)", marginBottom: "6px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span>🧬</span> MedDRA Taxonomy Classification
+                </span>
+                {occurrences[0]?.meddra_all_chains && occurrences[0].meddra_all_chains.length > 1 && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onShowChains) onShowChains(occurrences[0].meddra_all_chains!);
+                    }}
+                    style={{
+                      background: "rgba(0, 240, 255, 0.1)",
+                      border: "1px solid rgba(0, 240, 255, 0.2)",
+                      color: "var(--primary)",
+                      borderRadius: "6px",
+                      padding: "4px 8px",
+                      fontSize: "0.7rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px"
+                    }}
+                  >
+                    <span>+{occurrences[0].meddra_all_chains.length - 1} More Chains</span>
+                  </button>
+                )}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
                 <div><span style={{ color: "var(--text-muted)" }}>Preferred Term (PT):</span> <strong style={{ color: "var(--text-primary)" }}>{occurrences[0].meddra_pt_name}</strong> <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>({occurrences[0].meddra_pt_code})</span></div>

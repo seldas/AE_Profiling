@@ -38,6 +38,13 @@ app.add_middleware(
 def health_check():
     return {"status": "healthy"}
 
+@app.get("/api/config")
+def get_config():
+    import os
+    return {
+        "llm_provider": os.getenv("LLM_PROVIDER", "gemini")
+    }
+
 @app.get("/api/dailymed/search")
 def search_dailymed(q: str = Query(..., description="The drug name to search in DailyMed")):
     """
@@ -296,19 +303,32 @@ def extract_adverse_events_stream(id_or_spl_id: str, provider: Optional[str] = N
                     meddra_soc_name = None
                     meddra_hlt_name = None
                     meddra_hlgt_name = None
+                    meddra_all_chains = None
 
                     if ae_term:
                         from database import map_term_to_meddra
-                        target_pt_code = map_term_to_meddra(db, ae_term)
+                        target_pt_codes = map_term_to_meddra(db, ae_term)
                         
-                        if target_pt_code:
-                            pt_detail = db.query(models.MedDraHierarchy).filter(models.MedDraHierarchy.pt_code == target_pt_code).first()
-                            if pt_detail:
-                                meddra_pt_code = pt_detail.pt_code
-                                meddra_pt_name = pt_detail.pt_name
-                                meddra_soc_name = pt_detail.soc_name
-                                meddra_hlt_name = pt_detail.hlt_name
-                                meddra_hlgt_name = pt_detail.hlgt_name
+                        if target_pt_codes:
+                            meddra_all_chains = []
+                            for pt_code in target_pt_codes:
+                                pt_detail = db.query(models.MedDraHierarchy).filter(models.MedDraHierarchy.pt_code == pt_code).first()
+                                if pt_detail:
+                                    meddra_all_chains.append({
+                                        "pt_code": pt_detail.pt_code,
+                                        "pt_name": pt_detail.pt_name,
+                                        "soc_name": pt_detail.soc_name,
+                                        "hlt_name": pt_detail.hlt_name,
+                                        "hlgt_name": pt_detail.hlgt_name
+                                    })
+                            
+                            if meddra_all_chains:
+                                first_chain = meddra_all_chains[0]
+                                meddra_pt_code = first_chain["pt_code"]
+                                meddra_pt_name = first_chain["pt_name"]
+                                meddra_soc_name = first_chain["soc_name"]
+                                meddra_hlt_name = first_chain["hlt_name"]
+                                meddra_hlgt_name = first_chain["hlgt_name"]
 
                     ae = models.AdverseEvent(
                         drug_id=drug.id,
@@ -323,7 +343,8 @@ def extract_adverse_events_stream(id_or_spl_id: str, provider: Optional[str] = N
                         meddra_pt_name=meddra_pt_name,
                         meddra_soc_name=meddra_soc_name,
                         meddra_hlt_name=meddra_hlt_name,
-                        meddra_hlgt_name=meddra_hlgt_name
+                        meddra_hlgt_name=meddra_hlgt_name,
+                        meddra_all_chains=meddra_all_chains
                     )
                     db.add(ae)
                     new_aes.append(ae)

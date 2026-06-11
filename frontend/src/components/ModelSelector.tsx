@@ -6,12 +6,32 @@ export default function ModelSelector() {
   const [provider, setProvider] = useState<string>("");
 
   useEffect(() => {
-    // Load from localStorage on mount
-    const saved = localStorage.getItem("llm_provider");
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProvider(saved);
-    }
+    const initProvider = async () => {
+      const saved = localStorage.getItem("llm_provider");
+      if (saved) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setProvider(saved);
+      } else {
+        try {
+          const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+          const res = await fetch(`${API_BASE_URL}/api/config`);
+          if (res.ok) {
+            const data = await res.json();
+            const defaultProvider = data.llm_provider || "gemini";
+            setProvider(defaultProvider);
+            localStorage.setItem("llm_provider", defaultProvider);
+          } else {
+            setProvider("gemini");
+            localStorage.setItem("llm_provider", "gemini");
+          }
+        } catch (err) {
+          console.error("Failed to load config", err);
+          setProvider("gemini");
+          localStorage.setItem("llm_provider", "gemini");
+        }
+      }
+    };
+    initProvider();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -44,7 +64,6 @@ export default function ModelSelector() {
           outline: "none"
         }}
       >
-        <option value="">Default (Server Config)</option>
         <option value="gemini">Google Gemini</option>
         <option value="vllm">vLLM</option>
         <option value="openai">OpenAI</option>

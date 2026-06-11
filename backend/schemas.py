@@ -22,6 +22,7 @@ class AdverseEventResponse(BaseModel):
     meddra_soc_name: Optional[str] = None
     meddra_hlt_name: Optional[str] = None
     meddra_hlgt_name: Optional[str] = None
+    meddra_all_chains: Optional[List[Dict[str, str | int | None]]] = None
     created_at: datetime
 
     class Config:
