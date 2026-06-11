@@ -2,7 +2,7 @@ import json
 import requests
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from config import LLM_PROVIDER, LLM_MODEL, OLLAMA_HOST, OPENAI_API_KEY, OPENAI_API_BASE, GEMINI_API_KEY, GEMINI_MODEL
+from config import LLM_PROVIDER, LLM_MODEL, OLLAMA_HOST, OPENAI_API_KEY, OPENAI_API_BASE, GEMINI_API_KEY, GEMINI_MODEL, VLLM_API_BASE, VLLM_API_KEY, VLLM_MODEL
 
 class AdverseEventExtraction(BaseModel):
     ae_term: str = Field(description="Standardized clinical term for the adverse event (e.g., Headache, Nausea, Myocardial Infarction).")
@@ -188,27 +188,20 @@ def extract_ae_with_gemini(text: str, is_boxed_warning: bool = False) -> List[di
         return []
 
 def extract_ae_with_openai(text: str, is_boxed_warning: bool = False) -> List[dict]:
+def extract_ae_with_vllm(text: str, is_boxed_warning: bool = False) -> List[dict]:
     """
-    Call OpenAI API or custom OpenAI-compatible server (like vLLM) to extract adverse events.
+    Call vLLM API to extract adverse events.
     """
-    # For custom local base URLs, a key may not be required. Fallback to mock key if missing.
-    api_key = OPENAI_API_KEY
-    if not api_key:
-        if "api.openai.com" in OPENAI_API_BASE:
-            print("OpenAI API key is missing. Skipping extraction.")
-            return []
-        api_key = "mock-key"
-        
-    url = f"{OPENAI_API_BASE}/chat/completions"
+    api_key = VLLM_API_KEY or "mock-key"
+    url = f"{VLLM_API_BASE}/chat/completions" if VLLM_API_BASE else "http://localhost:8000/v1/chat/completions"
+    
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
     
     prompt = f"Analyze the following drug label section (Is Boxed Warning: {is_boxed_warning}). Extract the adverse events:\n\n{text}"
-    
-    # Use LLM_MODEL directly (e.g. 'llama-4')
-    model = LLM_MODEL
+    model = VLLM_MODEL or LLM_MODEL
     
     payload = {
         "model": model,
@@ -237,8 +230,9 @@ def extract_ae_with_openai(text: str, is_boxed_warning: bool = False) -> List[di
                 e["is_boxed_warning"] = False
         return events
     except Exception as e:
-        print(f"OpenAI/vLLM API extraction error: {e}")
+        print(f"vLLM API extraction error: {e}")
         return []
+
 
 def is_ollama_online() -> bool:
     """
@@ -271,8 +265,8 @@ def extract_adverse_events(text: str, is_boxed_warning: bool = False) -> List[di
         
     if provider == "gemini":
         return extract_ae_with_gemini(text, is_boxed_warning)
-    elif provider in ("openai", "vllm"):
-        return extract_ae_with_openai(text, is_boxed_warning)
+    elif provider == "vllm" or provider == "openai":
+        return extract_ae_with_vllm(text, is_boxed_warning)
     else:
         # Fallback to Ollama if no valid provider configured
         print(f"Using Ollama provider ({LLM_MODEL}).")

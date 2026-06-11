@@ -33,6 +33,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL}
+      - VLLM_API_BASE=${VLLM_API_BASE}
+      - VLLM_API_KEY=${VLLM_API_KEY}
+      - VLLM_MODEL=${VLLM_MODEL}
     volumes:
       - ./backend:/app
       - ./data:/data:ro
