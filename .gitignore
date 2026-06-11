@@ -1,0 +1,9 @@
+.env
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+.next/
+dist/
+coverage/
+data/MedDRA_28_0_ENglish/
